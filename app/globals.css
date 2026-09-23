@@ -1,0 +1,154 @@
+:root {
+  --bg: #f6f7f9;
+  --panel: #ffffff;
+  --text: #1f2328;
+  --muted: #656d76;
+  --border: #d8dee4;
+  --accent: #1f2328;
+  --danger: #cf222e;
+  --social: #2563eb;
+  --class: #16a34a;
+  --other: #ea580c;
+}
+
+* { box-sizing: border-box; }
+
+body {
+  margin: 0;
+  background: var(--bg);
+  color: var(--text);
+  font: 14px/1.45 -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+}
+
+.app { display: flex; min-height: 100vh; }
+
+.sidebar {
+  width: 380px;
+  flex-shrink: 0;
+  padding: 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  border-right: 1px solid var(--border);
+  background: var(--bg);
+  overflow-y: auto;
+  max-height: 100vh;
+  position: sticky;
+  top: 0;
+}
+
+.main { flex: 1; min-width: 0; padding: 16px; }
+
+h1 { font-size: 20px; margin: 0; }
+h2 { font-size: 15px; margin: 0 0 10px; }
+
+.panel {
+  background: var(--panel);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  padding: 14px;
+}
+
+.muted { color: var(--muted); font-size: 12.5px; }
+.error { color: var(--danger); font-size: 13px; margin: 8px 0 0; }
+.banner {
+  background: #fff8c5;
+  border: 1px solid #d4a72c;
+  border-radius: 8px;
+  padding: 8px 12px;
+  margin-bottom: 12px;
+  font-size: 13px;
+}
+
+label { display: block; font-size: 12.5px; color: var(--muted); margin: 8px 0 3px; }
+
+input, select, textarea {
+  font: inherit;
+  width: 100%;
+  padding: 7px 9px;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  background: #fff;
+  color: var(--text);
+}
+textarea { min-height: 120px; resize: vertical; }
+input[type="checkbox"] { width: auto; margin: 0 6px 0 0; }
+
+button, .button {
+  font: inherit;
+  padding: 7px 12px;
+  border-radius: 6px;
+  border: 1px solid var(--accent);
+  background: var(--accent);
+  color: #fff;
+  cursor: pointer;
+  text-decoration: none;
+  display: inline-block;
+}
+button:disabled { opacity: 0.5; cursor: default; }
+button.secondary { background: #fff; color: var(--text); border-color: var(--border); }
+button.link { background: none; border: none; color: var(--danger); padding: 0 4px; }
+
+.row { display: flex; gap: 8px; align-items: center; }
+.row > * { flex: 1; }
+.actions { display: flex; gap: 8px; margin-top: 10px; flex-wrap: wrap; }
+.check { display: flex; align-items: center; color: var(--text); font-size: 13.5px; margin: 4px 0; cursor: pointer; }
+
+.legend { display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 12px; }
+.chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 10px;
+  border-radius: 999px;
+  border: 1px solid var(--border);
+  background: #fff;
+  color: var(--text);
+  font-size: 13px;
+}
+.chip.off { opacity: 0.4; }
+.dot { width: 10px; height: 10px; border-radius: 50%; display: inline-block; flex-shrink: 0; }
+
+.feed-list { list-style: none; margin: 0 0 8px; padding: 0; }
+.feed-list li {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 0;
+  border-bottom: 1px solid var(--border);
+}
+.feed-list li:last-child { border-bottom: none; }
+.feed-list .name { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+
+.proposal {
+  border: 1px solid var(--border);
+  border-left: 4px solid var(--other);
+  border-radius: 6px;
+  padding: 8px;
+  margin-top: 8px;
+}
+.proposal .row { margin-top: 6px; }
+
+.modal-backdrop {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.35);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 16px;
+  z-index: 50;
+}
+.modal { width: 100%; max-width: 380px; }
+
+.fc { background: var(--panel); border-radius: 10px; padding: 12px; border: 1px solid var(--border); }
+.fc .fc-toolbar-title { font-size: 18px; }
+.fc .fc-button { font-size: 13px; }
+.fc-event { cursor: pointer; }
+
+@media (max-width: 900px) {
+  .app { flex-direction: column; }
+  .sidebar { width: 100%; max-height: none; position: static; border-right: none; border-bottom: 1px solid var(--border); }
+  .main { padding: 12px; }
+  .fc .fc-toolbar { flex-direction: column; gap: 8px; }
+}
