@@ -27,4 +27,13 @@ Then open http://localhost:3000.
 - **Type your events**: write events in plain English, click *Create events*, check the preview, then *Add to calendar*.
 - **Download**: choose categories and click *Download .ics*, then import the file into Google (Settings → Import & export) or Outlook (Add calendar → Upload from file).
 
-Your feed links and typed events are saved in `data/store.json` on your computer. Feed links are private, so don't share that file.
+When running locally, your feed links and typed events are saved in `data/store.json` on your computer. Feed links are private, so don't share that file.
+
+## Deploying to Vercel
+
+1. On https://vercel.com, click **Add New → Project**, import the `CalendarGenie` GitHub repo, and click **Deploy**.
+2. In the project, open **Storage → Create Database → Upstash (Redis)**, create a free database, and connect it to the project. This sets `KV_REST_API_URL` and `KV_REST_API_TOKEN` for you.
+3. In **Settings → Environment Variables**, add `ANTHROPIC_API_KEY` and `APP_PASSWORD` (the password you'll log in with).
+4. Open **Deployments**, click **⋯** on the latest one, and choose **Redeploy** so the new settings take effect.
+
+After that, every push to `main` deploys automatically.

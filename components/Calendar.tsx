@@ -58,6 +58,7 @@ export default function Calendar({ hidden, refreshKey, onSelect, onFeedErrors }:
       buttonText={{ today: "Today", month: "Month", week: "Week", list: "List" }}
       height="auto"
       dayMaxEvents={4}
+      eventDisplay="block"
       nowIndicator
       events={loadEvents}
       eventClick={(arg) => onSelect(arg.event.extendedProps.calEvent as CalEvent)}

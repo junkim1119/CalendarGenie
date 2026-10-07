@@ -24,7 +24,7 @@ export default function Home() {
   return (
     <div className="app">
       <aside className="sidebar">
-        <h1>Combined Calendar</h1>
+        <h1>CalendarGenie</h1>
         <QuickAdd onSaved={refresh} />
         <FeedManager errors={feedErrors} onChange={refresh} />
         <ExportPanel />

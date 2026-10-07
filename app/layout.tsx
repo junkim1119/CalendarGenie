@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 import "./globals.css";
 
 export const metadata: Metadata = {
-  title: "Combined Calendar",
+  title: "CalendarGenie",
   description: "Outlook, Canvas, and Google calendars in one place",
 };
 
