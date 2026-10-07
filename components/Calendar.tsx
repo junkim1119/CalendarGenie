@@ -7,22 +7,19 @@ import listPlugin from "@fullcalendar/list";
 import type { EventInput, EventSourceFuncArg } from "@fullcalendar/core";
 import { useEffect, useRef } from "react";
 import { CATEGORY_INFO } from "@/lib/colors";
-import type { CalEvent, Category, FeedError } from "@/lib/types";
+import type { CalEvent, Category } from "@/lib/types";
 
 interface Props {
   hidden: Category[];
   refreshKey: number;
   onSelect: (event: CalEvent) => void;
-  onFeedErrors: (errors: FeedError[]) => void;
 }
 
-export default function Calendar({ hidden, refreshKey, onSelect, onFeedErrors }: Props) {
+export default function Calendar({ hidden, refreshKey, onSelect }: Props) {
   const ref = useRef<FullCalendar>(null);
-  // The event source reads these through refs so it stays stable across renders.
+  // The event source reads this through a ref so it stays stable across renders.
   const hiddenRef = useRef(hidden);
   hiddenRef.current = hidden;
-  const onErrorsRef = useRef(onFeedErrors);
-  onErrorsRef.current = onFeedErrors;
 
   useEffect(() => {
     ref.current?.getApi().refetchEvents();
@@ -32,8 +29,7 @@ export default function Calendar({ hidden, refreshKey, onSelect, onFeedErrors }:
     const qs = new URLSearchParams({ start: info.start.toISOString(), end: info.end.toISOString() });
     const res = await fetch(`/api/events?${qs}`);
     if (!res.ok) throw new Error("Failed to load events");
-    const data: { events: CalEvent[]; errors: FeedError[] } = await res.json();
-    onErrorsRef.current(data.errors);
+    const data: { events: CalEvent[] } = await res.json();
     return data.events
       .filter((e) => !hiddenRef.current.includes(e.category))
       .map((e) => ({

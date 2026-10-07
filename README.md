@@ -1,39 +1,31 @@
-# Combined Calendar
+# CalendarGenie
 
-Merge your Canvas, Google, and Outlook calendars into one view, type events in plain English, and download everything as an `.ics` file.
+Type your events in plain English (or fill in a quick form), see them on a color-coded calendar, and download them as `.ics` calendar invites for Outlook, Google Calendar, or Apple Calendar. No AI and no API keys.
 
 Colors: **blue** = social, **green** = class, **orange** = other.
 
-## Setup (one time)
+## Run it on your Mac
 
-1. Install Node.js 20 or newer from https://nodejs.org (the "LTS" installer).
-2. In this folder, run:
-   ```bash
-   npm install
-   ```
-3. Copy `.env.local.example` to `.env.local` and paste your Anthropic API key (from https://console.anthropic.com) after `ANTHROPIC_API_KEY=`.
-
-## Run
+Requires Node.js 20 or newer.
 
 ```bash
+npm install
 npm run dev
 ```
 
-Then open http://localhost:3000.
+Then open http://localhost:3000. Events are saved to `data/store.json`.
 
 ## Using it
 
-- **Synced calendars**: pick the source, paste its private feed link (instructions appear under the box), and click *Add calendar*. Canvas events default to green. Google and Outlook events are colored by keywords, and you can click any event to change its color.
-- **Type your events**: write events in plain English, click *Create events*, check the preview, then *Add to calendar*.
-- **Download**: choose categories and click *Download .ics*, then import the file into Google (Settings → Import & export) or Outlook (Add calendar → Upload from file).
-
-When running locally, your feed links and typed events are saved in `data/store.json` on your computer. Feed links are private, so don't share that file.
+- **Add events**: type one event per line (for example `Chicken Beer Night Oct 1 6-8pm` or `CS101 lecture every Tue/Thu 2-3:15pm until Dec 12 in Hall B`) and click *Read text*. Or click *+ Blank event* to fill in the form yourself. Check the details, then click *Save*.
+- **Download one invite**: click an event on the calendar, then *Download invite (.ics)*. Open the file to add it to your calendar, or attach it to an email to invite others.
+- **Download everything**: use *Download all events*, optionally filtered by color.
 
 ## Deploying to Vercel
 
 1. On https://vercel.com, click **Add New → Project**, import the `CalendarGenie` GitHub repo, and click **Deploy**.
-2. In the project, open **Storage → Create Database → Upstash (Redis)**, create a free database, and connect it to the project. This sets `KV_REST_API_URL` and `KV_REST_API_TOKEN` for you.
-3. In **Settings → Environment Variables**, add `ANTHROPIC_API_KEY` and `APP_PASSWORD` (the password you'll log in with).
+2. In the project, open **Storage → Create Database → Upstash (Redis)**, create a free database, and connect it to the project. This is where events are saved.
+3. In **Settings → Environment Variables**, add `APP_PASSWORD`: a password you make up for logging in.
 4. Open **Deployments**, click **⋯** on the latest one, and choose **Redeploy** so the new settings take effect.
 
 After that, every push to `main` deploys automatically.

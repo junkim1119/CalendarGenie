@@ -51,32 +51,16 @@ function manualLines(ev: ManualEvent, stamp: string): string[] {
   ];
 }
 
-function feedLines(ev: CalEvent, stamp: string): string[] {
-  const when = ev.allDay
-    ? [`DTSTART;VALUE=DATE:${compactLocal(ev.start)}`, `DTEND;VALUE=DATE:${compactLocal(ev.end)}`]
-    : [`DTSTART:${utcStamp(new Date(ev.start))}`, `DTEND:${utcStamp(new Date(ev.end))}`];
-  // Feed occurrences are exported individually, so each needs its own stable UID.
-  const uid = encodeURIComponent(ev.id).replace(/%/g, "");
-  return [
-    "BEGIN:VEVENT",
-    `UID:${uid}@${UID_DOMAIN}`,
-    `DTSTAMP:${stamp}`,
-    ...when,
-    ...commonLines(ev.title, ev.location, ev.category),
-    "END:VEVENT",
-  ];
-}
-
-export function buildIcs(manual: ManualEvent[], feedEvents: CalEvent[]): string {
+export function buildIcs(events: ManualEvent[]): string {
   const stamp = utcStamp(new Date());
   const lines = [
     "BEGIN:VCALENDAR",
     "VERSION:2.0",
-    "PRODID:-//Combined Calendar//EN",
+    "PRODID:-//CalendarGenie//EN",
     "CALSCALE:GREGORIAN",
-    "X-WR-CALNAME:Combined Calendar",
-    ...manual.flatMap((ev) => manualLines(ev, stamp)),
-    ...feedEvents.flatMap((ev) => feedLines(ev, stamp)),
+    "METHOD:PUBLISH",
+    "X-WR-CALNAME:CalendarGenie",
+    ...events.flatMap((ev) => manualLines(ev, stamp)),
     "END:VCALENDAR",
   ];
   return lines.map(fold).join("\r\n") + "\r\n";

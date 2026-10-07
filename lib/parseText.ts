@@ -1,78 +1,150 @@
-import Anthropic from "@anthropic-ai/sdk";
-import { zodOutputFormat } from "@anthropic-ai/sdk/helpers/zod";
-import { z } from "zod";
-import { cleanEvent } from "./validate";
+import * as chrono from "chrono-node";
+import { categorize } from "./categorize";
+import { buildRrule, NO_REPEAT, type Repeat, type Weekday } from "./repeat";
 import type { ProposedEvent } from "./types";
+import { cleanEvent } from "./validate";
 
-const ParsedEvents = z.object({
-  events: z.array(
-    z.object({
-      title: z.string(),
-      start: z.string(),
-      end: z.string().nullable(),
-      allDay: z.boolean(),
-      location: z.string().nullable(),
-      category: z.enum(["social", "class", "other"]),
-      rrule: z.string().nullable(),
-    }),
-  ),
-});
+// Free, offline reading of typed notes: one event per line (or per ";").
+// chrono-node finds the date/time; simple patterns find repeats and places.
 
-const SYSTEM = `You turn a student's informal notes into calendar events.
+const DAY = "(?:sun|mon|tue|wed|thu|fri|sat)[a-z]*";
+const DAY_CODES: Record<string, Weekday> = {
+  sun: "SU", mon: "MO", tue: "TU", wed: "WE", thu: "TH", fri: "FR", sat: "SA",
+};
+const LIST_SEP = /\s*(?:\/|,|&|\band\b)\s*/i;
 
-Rules:
-- start: "YYYY-MM-DDTHH:mm" in the user's local time for timed events, or "YYYY-MM-DD" for all-day events. Never include a timezone offset.
-- end: same format as start, or null. For a timed event with no stated end, use null (the app assumes one hour). For an all-day event, end is the last day (inclusive), or null for a single day.
-- Resolve relative dates ("Friday", "tomorrow", "next week") against today's date given in the message, choosing the next upcoming occurrence.
-- Repeating events: set start to the first occurrence and rrule to an RFC 5545 rule without the "RRULE:" prefix and without DTSTART, e.g. FREQ=WEEKLY;BYDAY=TU,TH;UNTIL=20261212T235959. The first occurrence must itself match the rule. Use null for one-time events.
-- category: "class" for anything academic (lectures, labs, sections, exams, office hours, assignments, study sessions); "social" for time with friends or family, parties, meals out, clubs, games, concerts; "other" for everything else (appointments, work, errands, meetings).
-- Keep titles short and put places in location.
-- Only include events the notes actually describe. If there are none, return an empty list.`;
+const pad = (n: number) => String(n).padStart(2, "0");
+const toLocal = (d: Date, allDay: boolean) => {
+  const date = `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
+  return allDay ? date : `${date}T${pad(d.getHours())}:${pad(d.getMinutes())}`;
+};
 
-export class ParseError extends Error {}
+function extractRepeat(input: string, ref: Date): { text: string; repeat: Repeat } {
+  let text = input;
+  const repeat: Repeat = { ...NO_REPEAT, days: [] };
+  const cut = (m: RegExpMatchArray | null) => {
+    if (m) text = text.replace(m[0], " ");
+    return m;
+  };
 
-export async function parseEventsFromText(notes: string, timezone: string): Promise<ProposedEvent[]> {
-  const now = new Date();
-  const today = new Intl.DateTimeFormat("en-CA", { timeZone: timezone, year: "numeric", month: "2-digit", day: "2-digit" }).format(now);
-  const weekday = new Intl.DateTimeFormat("en-US", { timeZone: timezone, weekday: "long" }).format(now);
-
-  let response;
-  try {
-    const client = new Anthropic();
-    response = await client.messages.parse({
-      model: "claude-opus-5",
-      max_tokens: 16000,
-      system: SYSTEM,
-      output_config: { effort: "low", format: zodOutputFormat(ParsedEvents) },
-      messages: [
-        {
-          role: "user",
-          content: `Today is ${weekday}, ${today}. My timezone is ${timezone}.\n\n<notes>\n${notes}\n</notes>`,
-        },
-      ],
-    });
-  } catch (err) {
-    if (err instanceof Anthropic.AuthenticationError) {
-      throw new ParseError("Your Anthropic API key was rejected. Check ANTHROPIC_API_KEY in .env.local.");
-    }
-    if (err instanceof Anthropic.RateLimitError) {
-      throw new ParseError("Too many requests right now. Wait a moment and try again.");
-    }
-    if (err instanceof Anthropic.APIConnectionError) {
-      throw new ParseError("Couldn't reach Claude. Check your internet connection.");
-    }
-    if (err instanceof Anthropic.APIError) {
-      throw new ParseError(`Claude returned an error: ${err.message}`);
-    }
-    if (err instanceof Error && /api.?key|credentials/i.test(err.message)) {
-      throw new ParseError("No Anthropic API key found. Add ANTHROPIC_API_KEY to .env.local and restart the app.");
-    }
-    throw err;
+  const until = cut(text.match(/\b(?:until|till|thru|through)\s+([^,;]+?)(?=\s+(?:in|at|@)\s|[,;]|$)/i));
+  if (until) {
+    const d = chrono.parseDate(until[1], ref, { forwardDate: true });
+    if (d) repeat.until = toLocal(d, true);
   }
 
-  if (response.stop_reason === "refusal") throw new ParseError("Claude declined to process that text.");
-  if (response.stop_reason === "max_tokens") throw new ParseError("That's too much text at once. Try splitting it up.");
-  if (!response.parsed_output) throw new ParseError("Couldn't read events from that text. Try rephrasing.");
+  let m: RegExpMatchArray | null;
+  if ((m = cut(text.match(new RegExp(`\\b(?:every|each)\\s+(${DAY}(?:${LIST_SEP.source}${DAY})*)`, "i"))))) {
+    repeat.freq = "WEEKLY";
+    repeat.days = m[1]
+      .split(LIST_SEP)
+      .map((s) => DAY_CODES[s.slice(0, 3).toLowerCase()])
+      .filter(Boolean);
+  } else if (cut(text.match(/\b(?:every\s+)?weekdays?\b/i))) {
+    repeat.freq = "WEEKLY";
+    repeat.days = ["MO", "TU", "WE", "TH", "FR"];
+  } else if (cut(text.match(/\b(?:every\s+day|daily)\b/i))) {
+    repeat.freq = "DAILY";
+  } else if (cut(text.match(/\b(?:every\s+week|weekly)\b/i))) {
+    repeat.freq = "WEEKLY";
+  } else if (cut(text.match(/\b(?:every\s+month|monthly)\b/i))) {
+    repeat.freq = "MONTHLY";
+  }
+  return { text, repeat };
+}
 
-  return response.parsed_output.events.map(cleanEvent).filter((e): e is ProposedEvent => e !== null);
+/** Strip leftover connector words and punctuation from the edges of a title. */
+function tidy(s: string): string {
+  const edge = /^(?:\s|[-–,:;]|\b(?:on|at|from|starting|beginning|by)\b)+|(?:\s|[-–,:;]|\b(?:on|at|from|starting|beginning|by)\b)+$/gi;
+  return s.replace(/\s+/g, " ").replace(edge, "").trim();
+}
+
+/**
+ * Pick the most specific date in the line, so a word like "Night" in a title
+ * doesn't beat "Oct 1 6-8pm".
+ */
+function bestResult(text: string, ref: Date, forwardDate: boolean) {
+  const score = (r: chrono.ParsedResult) =>
+    (r.start.isCertain("day") || r.start.isCertain("weekday") ? 4 : 0) +
+    (r.start.isCertain("hour") ? 2 : 0) +
+    r.text.length / 1000;
+  return chrono.parse(text, ref, { forwardDate }).sort((a, b) => score(b) - score(a))[0];
+}
+
+function pickDate(text: string, ref: Date) {
+  // Explicit dates ("Oct 1") use the nearest year, so a date a few days ago stays this year.
+  // Weekday-only dates ("Friday", "next Wed") always mean the upcoming one.
+  const nearest = bestResult(text, ref, false);
+  if (nearest && !nearest.start.isCertain("day") && nearest.start.isCertain("weekday")) {
+    return bestResult(text, ref, true);
+  }
+  return nearest;
+}
+
+// chrono reads a bare "night"/"morning" as a time ("Beer Night" -> tonight), so hide those words
+// from it unless they follow a date word ("this morning", "tomorrow evening"). "tonight" still works.
+const TIME_OF_DAY = /(?<!\b(?:this|tomorrow|today|in the|on)\s)\b(night|morning|afternoon|evening)\b/gi;
+const MASK_START = "";
+const MASK_END = "";
+
+function maskTimeOfDay(s: string): { masked: string; words: string[] } {
+  const words: string[] = [];
+  const masked = s.replace(TIME_OF_DAY, (w) => `${MASK_START}${words.push(w) - 1}${MASK_END}`);
+  return { masked, words };
+}
+
+function unmask(s: string, words: string[]): string {
+  return s.replace(new RegExp(`${MASK_START}(\\d+)${MASK_END}`, "g"), (_, i) => words[Number(i)]);
+}
+
+function parseLine(line: string, ref: Date): ProposedEvent | null {
+  const { masked, words } = maskTimeOfDay(line.replace(/[–—]/g, "-"));
+  const { text, repeat } = extractRepeat(masked, ref);
+
+  const result = pickDate(text, ref);
+  let start = result ? result.start.date() : new Date(ref);
+  let end = result?.end?.date() ?? null;
+  const allDay = !result || !result.start.isCertain("hour");
+
+  let rest = unmask(result ? text.replace(result.text, " ") : text, words);
+
+  // A weekly repeat must start on one of its days, and never before today.
+  if (repeat.freq === "WEEKLY" && repeat.days.length) {
+    const today = new Date(ref.getFullYear(), ref.getMonth(), ref.getDate());
+    let shift = 0;
+    const startsBeforeToday = () => new Date(start.getTime() + shift * 86_400_000) < today;
+    const dayCode = () => (["SU", "MO", "TU", "WE", "TH", "FR", "SA"] as const)[new Date(start.getTime() + shift * 86_400_000).getDay()];
+    while (shift < 14 && (startsBeforeToday() || !repeat.days.includes(dayCode()))) shift++;
+    start = new Date(start.getTime() + shift * 86_400_000);
+    if (end) end = new Date(end.getTime() + shift * 86_400_000);
+  }
+
+  let location: string | null = null;
+  const place = rest.match(/\s(?:in|at|@)\s+([A-Z0-9][^,;]*?)\s*$/);
+  if (place) {
+    location = place[1].trim();
+    rest = rest.slice(0, place.index);
+  }
+
+  const title = tidy(rest);
+  if (!title) return null;
+
+  return cleanEvent({
+    title,
+    start: toLocal(start, allDay),
+    end: end ? toLocal(end, allDay) : null,
+    allDay,
+    location,
+    category: categorize(title),
+    rrule: buildRrule(repeat),
+  });
+}
+
+export function parseEventsFromText(notes: string, ref = new Date()): ProposedEvent[] {
+  return notes
+    .split(/\n|;/)
+    .map((line) => line.trim())
+    .filter(Boolean)
+    .map((line) => parseLine(line, ref))
+    .filter((e): e is ProposedEvent => e !== null);
 }

@@ -26,7 +26,7 @@ export default function EventDetails({ event, onClose, onChanged }: Props) {
     await fetch("/api/events", {
       method: "PATCH",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ baseId: event.baseId, category }),
+      body: JSON.stringify({ id: event.baseId, category }),
     });
     onChanged();
     onClose();
@@ -42,13 +42,16 @@ export default function EventDetails({ event, onClose, onChanged }: Props) {
 
   return (
     <div className="modal-backdrop" onClick={onClose}>
-      <div className="panel modal" onClick={(e) => e.stopPropagation()}>
+      <div
+        className="panel modal"
+        style={{ borderLeft: `5px solid ${CATEGORY_INFO[event.category].color}` }}
+        onClick={(e) => e.stopPropagation()}
+      >
         <h2>{event.title}</h2>
         <p className="muted">
           {formatWhen(event)}
           {event.location && <><br />📍 {event.location}</>}
-          <br />From: {event.sourceName}
-          {event.recurring && " · repeats"}
+          {event.recurring && <><br />🔁 Repeats</>}
         </p>
         <label>Category{event.recurring ? " (applies to all repeats)" : ""}</label>
         <div className="legend">
@@ -65,15 +68,20 @@ export default function EventDetails({ event, onClose, onChanged }: Props) {
           ))}
         </div>
         <div className="actions">
-          {event.source === "manual" && (
-            <button className="secondary" style={{ color: "var(--danger)" }} onClick={remove}>
-              Delete
-            </button>
-          )}
+          <a className="button" href={`/api/export?id=${encodeURIComponent(event.baseId)}`} download>
+            Download invite (.ics)
+          </a>
+          <button className="secondary" style={{ color: "var(--danger)" }} onClick={remove}>
+            Delete
+          </button>
           <button className="secondary" onClick={onClose}>
             Close
           </button>
         </div>
+        <p className="muted" style={{ marginTop: 10 }}>
+          Open the downloaded file to add it to Outlook, Google Calendar, or Apple Calendar, or attach it to an email
+          to invite others.
+        </p>
       </div>
     </div>
   );

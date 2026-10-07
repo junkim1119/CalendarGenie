@@ -1,5 +1,5 @@
 import { randomUUID } from "crypto";
-import { collectEvents } from "@/lib/events";
+import { occurrences } from "@/lib/events";
 import { readStore, updateStore } from "@/lib/store";
 import { CATEGORIES, type ManualEvent, type ProposedEvent } from "@/lib/types";
 import { cleanEvent, isValidTimezone } from "@/lib/validate";
@@ -13,16 +13,16 @@ function parseDate(value: string | null, fallback: Date): Date {
   return isNaN(d.getTime()) ? fallback : d;
 }
 
-/** GET ?start=&end= : every occurrence in the range, plus any feeds that failed to load. */
+/** GET ?start=&end= : every occurrence in the range. */
 export async function GET(req: Request) {
   const params = new URL(req.url).searchParams;
   const start = parseDate(params.get("start"), new Date(Date.now() - 31 * DAY));
   const end = parseDate(params.get("end"), new Date(Date.now() + 62 * DAY));
-  const store = await readStore();
-  return Response.json(await collectEvents(store, start, end));
+  const { manualEvents } = await readStore();
+  return Response.json({ events: manualEvents.flatMap((ev) => occurrences(ev, start, end)) });
 }
 
-/** POST {events, timezone}: save events confirmed from the text box. */
+/** POST {events, timezone}: save events from the form. */
 export async function POST(req: Request) {
   const body = await req.json().catch(() => null);
   const timezone = isValidTimezone(body?.timezone) ? body.timezone : Intl.DateTimeFormat().resolvedOptions().timeZone;
@@ -39,21 +39,20 @@ export async function POST(req: Request) {
   return Response.json({ saved: events.length });
 }
 
-/** PATCH {baseId, category}: recolor an event series. */
+/** PATCH {id, category}: recolor an event (all its repeats). */
 export async function PATCH(req: Request) {
   const body = await req.json().catch(() => null);
-  if (typeof body?.baseId !== "string" || !CATEGORIES.includes(body.category)) {
+  if (typeof body?.id !== "string" || !CATEGORIES.includes(body.category)) {
     return Response.json({ error: "Bad request" }, { status: 400 });
   }
   await updateStore((store) => {
-    const manual = store.manualEvents.find((e) => e.id === body.baseId);
-    if (manual) manual.category = body.category;
-    else store.categoryOverrides[body.baseId] = body.category;
+    const ev = store.manualEvents.find((e) => e.id === body.id);
+    if (ev) ev.category = body.category;
   });
   return Response.json({ ok: true });
 }
 
-/** DELETE ?id= : remove a typed-in event (the whole series if it repeats). */
+/** DELETE ?id= : remove an event (the whole series if it repeats). */
 export async function DELETE(req: Request) {
   const id = new URL(req.url).searchParams.get("id");
   await updateStore((store) => {

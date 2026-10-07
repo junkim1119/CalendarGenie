@@ -3,7 +3,7 @@ import path from "path";
 import { Redis } from "@upstash/redis";
 import type { Store } from "./types";
 
-const EMPTY: Store = { feeds: [], manualEvents: [], categoryOverrides: {} };
+const EMPTY: Store = { manualEvents: [] };
 
 // On Vercel the filesystem doesn't persist, so use Upstash Redis when it's configured.
 // Vercel's Upstash integration sets KV_REST_API_*; Upstash's own setup uses UPSTASH_REDIS_REST_*.
