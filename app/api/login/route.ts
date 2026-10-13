@@ -5,7 +5,7 @@ export const dynamic = "force-dynamic";
 const NINETY_DAYS = 90 * 24 * 60 * 60;
 
 export async function POST(req: Request) {
-  const password = process.env.APP_PASSWORD;
+  const password = process.env.APP_PASSWORD1;
   if (!password) return Response.json({ ok: true });
 
   const body = await req.json().catch(() => null);

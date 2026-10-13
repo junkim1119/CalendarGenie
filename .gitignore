@@ -3,8 +3,11 @@ node_modules/
 next-env.d.ts
 *.tsbuildinfo
 .env*.local
-# Holds your private calendar feed links
+# Locally saved events
 data/
 # Personal Claude Code settings
 .claude/settings.local.json
 .DS_Store
+.vercel
+.env*
+!.env.local.example

@@ -1,9 +1,9 @@
 import { NextResponse, type NextRequest } from "next/server";
 import { AUTH_COOKIE, authToken, safeEqual } from "./lib/auth";
 
-// Password protection is on only when APP_PASSWORD is set (it should be on Vercel; locally it's optional).
+// Password protection is on only when APP_PASSWORD1 is set (it should be on Vercel; locally it's optional).
 export async function middleware(req: NextRequest) {
-  const password = process.env.APP_PASSWORD;
+  const password = process.env.APP_PASSWORD1;
   if (!password) return NextResponse.next();
 
   const cookie = req.cookies.get(AUTH_COOKIE)?.value;

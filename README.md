@@ -25,7 +25,7 @@ Then open http://localhost:3000. Events are saved to `data/store.json`.
 
 1. On https://vercel.com, click **Add New → Project**, import the `CalendarGenie` GitHub repo, and click **Deploy**.
 2. In the project, open **Storage → Create Database → Upstash (Redis)**, create a free database, and connect it to the project. This is where events are saved.
-3. In **Settings → Environment Variables**, add `APP_PASSWORD`: a password you make up for logging in.
+3. In **Settings → Environment Variables**, add `APP_PASSWORD1`: a password you make up for logging in.
 4. Open **Deployments**, click **⋯** on the latest one, and choose **Redeploy** so the new settings take effect.
 
 After that, every push to `main` deploys automatically.

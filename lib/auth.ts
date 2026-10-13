@@ -2,7 +2,7 @@
 
 export const AUTH_COOKIE = "cg_auth";
 
-/** The cookie value that proves the visitor knew APP_PASSWORD. Changing the password logs everyone out. */
+/** The cookie value that proves the visitor knew APP_PASSWORD1. Changing the password logs everyone out. */
 export async function authToken(password: string): Promise<string> {
   const data = new TextEncoder().encode(`calendar-genie:${password}`);
   const hash = await crypto.subtle.digest("SHA-256", data);
